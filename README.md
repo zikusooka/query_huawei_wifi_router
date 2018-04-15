@@ -1,3 +1,6 @@
+![alt text](query_huawei_mifi.png "Query Huawei WiFi Router")
+![alt text](huawei_5373s.jpg "Query Huawei WiFi Router")
+
 Introdution
 -----------
 
@@ -36,8 +39,8 @@ Usage: ./query_huawei_wifi_router.sh [IP_ADDRESS] [LOGIN_USER] [LOGIN_PASSWORD][
 
 Tasks
 -----
-info_all
-reboot
+info_all \n
+reboot \n
 sms_read
 sms_send [NUMBER] [MESSAGE]
 
