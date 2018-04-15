@@ -6,16 +6,16 @@ Introdution
 
 This script queries a Huawei LTE WiFi router (MiFi) to get detailed information such
 as signal strength, battery status, remaining data balance etc.  The following 
-information can be queried for using theis tool:
+information can be queried for using this tool:
 
-1. Device Name, Model, Serial IMEI/IMSI Numbers
+1. Device Name, Model, Serial IMEI, and IMSI Numbers
 
 2. SIM lock status
 
-3. Connection status, including network provider, type, signal strength,
+3. Network Connection Status, including network provider, type, signal strength,
    and cell tower
 
-4. WAN IP , Primary, and Secondary DNS addresses
+4. WAN IP, Primary, and Secondary DNS addresses
 
 5. Remaining data balances and start date
 
