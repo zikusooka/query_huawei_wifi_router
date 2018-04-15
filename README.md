@@ -1,3 +1,6 @@
+![alt text](query_huawei_mifi.png "Query Huawei WiFi Router")
+![alt text](huawei_5373s.jpg "Query Huawei WiFi Router")
+
 Introdution
 -----------
 
