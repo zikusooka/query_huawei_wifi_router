@@ -39,9 +39,12 @@ Usage: ./query_huawei_wifi_router.sh [IP_ADDRESS] [LOGIN_USER] [LOGIN_PASSWORD][
 
 Tasks
 -----
-info_all \n
-reboot \n
+info_all
+
+reboot
+
 sms_read
+
 sms_send [NUMBER] [MESSAGE]
 
 
