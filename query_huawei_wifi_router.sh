@@ -513,7 +513,8 @@ reboot
 ;;
 
 *)
-./$(basename $0) $MIFI_IP_ADDRESS $MIFI_LOGIN_ADMIN_USER $MIFI_LOGIN_ADMIN_PASSWORD info_all
+echo script=$0
+$0 $MIFI_IP_ADDRESS $MIFI_LOGIN_ADMIN_USER $MIFI_LOGIN_ADMIN_PASSWORD info_all
 ;;
 
 esac
