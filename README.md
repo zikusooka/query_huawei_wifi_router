@@ -26,9 +26,12 @@ information can be queried for using this tool:
 8. Number of New and Old SMS messages
 
 
-NOTE: This script was tested using a Huawei WiFi router model No. E5373s-155
+*NOTE:* This script was tested using a Huawei WiFi router model No. E5373s-155
 
-Contributions, and bug fixes are welcome
+For updates to this, and other CLI tools, please follow me on twitter: <@jzikusooka> or 
+email me at josephzik AT gmail.com.  
+
+As always, your contributions, and bug fixes are welcome
 
 Usage
 ------
@@ -46,8 +49,3 @@ reboot
 sms_read
 
 sms_send [NUMBER] [MESSAGE]
-
-
-Contact
--------
-Please follow me on twitter: @jzikusooka or email me at josephzik AT gmail.com
