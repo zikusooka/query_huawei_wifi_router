@@ -1,8 +1,8 @@
-![alt text](query_huawei_mifi.png "Query Huawei WiFi Router")
-![alt text](huawei_5373s.jpg "Query Huawei WiFi Router")
+![alt text](screenshots/query_huawei_mifi.png "Query Huawei WiFi Router")
+![alt text](screenshots/huawei_5373s.jpg "Query Huawei WiFi Router")
 
-Introdution
------------
+Introduction
+------------
 
 This script queries a Huawei LTE WiFi router (MiFi) to get detailed information such
 as signal strength, battery status, remaining data balance etc.  The following 
@@ -32,12 +32,22 @@ For updates to this, and other CLI tools, please follow me on twitter: **[@jziku
 
 As always, your contributions, and bug fixes are welcome
 
+
+Tested Devices
+--------------
+- Huawei E5373s-155
+
+
+Requirements
+------------
+1. coreutils 8+ packages with base64 and sha256sum utilities
+
+
 Usage
 ------
 Usage: ./query_huawei_wifi_router.sh [IP_ADDRESS] [LOGIN_USER] [LOGIN_PASSWORD][TASK (Optional)]
 
-  e.g. ./query_huawei_wifi_router.sh 192.168.8.1 admin secret info
-
+  e.g. ./query_huawei_wifi_router.sh 192.168.8.1 admin secret info_all
 
 Tasks
 -----

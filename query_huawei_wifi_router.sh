@@ -4,7 +4,7 @@
 #
 # Copyright (C) 2018-2019 Joseph Zikusooka.
 #
-# Find me on twitter @jzikusooka or email josephzik AT gmai.com
+# Find me on twitter @jzikusooka or email josephzik AT gmail.com
 
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ clear
 cat <<EOT
 Usage: ./$(basename $0) [IP_ADDRESS] [LOGIN_USER] [LOGIN_PASSWORD][TASK (Optional)]
 
-  e.g. ./$(basename $0) 192.168.8.1 admin secret info
+  e.g. ./$(basename $0) 192.168.8.1 admin secret info_all
 
 
 Tasks
@@ -60,6 +60,23 @@ sms_send [NUMBER] [MESSAGE]
 
 EOT
 exit
+fi
+}
+
+# See if you can reach the router
+check_connectivity () {
+PING_COUNT=3
+PING_TIMEOUT=3
+ping -c $PING_COUNT -W $PING_TIMEOUT $MIFI_IP_ADDRESS > /dev/null 2>&1
+MIFI_REACHEABLE=$?
+#
+# Notify and quit when there's NO Internet 
+if [ "$MIFI_REACHEABLE" != "0" ];
+then
+clear
+logger -s -t $(basename $0) "The WiFi router at $MIFI_IP_ADDRESS is not reacheable.
+Please check that it is powered on and that you are using the correct IP address"
+exit 1
 fi
 }
 
@@ -101,6 +118,7 @@ a) The password you used '$MIFI_LOGIN_ADMIN_PASSWORD' is incorrect
 b) The username name you used '$MIFI_LOGIN_ADMIN_USER' is incorrect
 c) The IP address of '$MIFI_IP_ADDRESS' is not reachable
 
+Login response: $LOGIN_RESPONSE
 EOT
 exit 2
 fi
@@ -460,6 +478,8 @@ sms_count_local_inbox
 #################
 
 usage
+
+check_connectivity
 
 case $MIFI_ACTION in
 info_all)
