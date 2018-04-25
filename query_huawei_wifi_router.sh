@@ -76,7 +76,7 @@ then
 clear
 logger -s -t $(basename $0) "The WiFi router at $MIFI_IP_ADDRESS is not reacheable.
 Please check that it is powered on and that you are using the correct IP address"
-exit 1
+exit 255
 fi
 }
 
@@ -118,9 +118,12 @@ a) The password you used '$MIFI_LOGIN_ADMIN_PASSWORD' is incorrect
 b) The username name you used '$MIFI_LOGIN_ADMIN_USER' is incorrect
 c) The IP address of '$MIFI_IP_ADDRESS' is not reachable
 
-Login response: $LOGIN_RESPONSE
+Login response: <$LOGIN_RESPONSE>
+
+$MIFI_LOGIN_ADMIN_PASSWORD_BASE64
+
 EOT
-exit 2
+exit 255
 fi
 }
 
