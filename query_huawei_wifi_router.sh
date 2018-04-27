@@ -55,6 +55,7 @@ Tasks
 -----
 info_all
 battery
+data
 reboot
 sms_read
 sms_send [NUMBER] [MESSAGE]
@@ -376,6 +377,7 @@ SECONDARY_DNS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | 
 
 # Data Balance - Available
 data_balance_available () {
+login
 DATA_BUNDLE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/start_date | grep -oP "(?<=<DataLimit>).+?(?=</DataLimit>)")
 DATA_START_DAY=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/start_date | grep -oP "(?<=<StartDay>).+?(?=</StartDay>)")
 DATA_USED_DOWNLOAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/month_statistics | grep -oP "(?<=<CurrentMonthDownload>).+?(?=</CurrentMonthDownload>)")
@@ -400,6 +402,39 @@ DATA_REMAINING=$(calc $DATA_LIMIT-$DATA_USED)
 DATA_REMAINING_GB=$(calc $DATA_REMAINING/1073741824 | xargs printf '%.2f')
 DATA_REMAINING_MB=$(calc $DATA_REMAINING/1048576 | xargs printf '%.0f')
 DATA_REMAINING_PERCENT=$(calc "$DATA_REMAINING/$DATA_LIMIT*100" | xargs printf '%.1f')
+DATA_REMAINING_PERCENT0=$(calc "$DATA_REMAINING/$DATA_LIMIT*100" | xargs printf '%.0f')
+
+# Data balance descriptions
+DATA_BALANCE_THRESHOLD_UNUSED=100
+DATA_BALANCE_THRESHOLD_LOW=35
+DATA_BALANCE_THRESHOLD_WARNING=20
+DATA_BALANCE_THRESHOLD_CRITICAL=10
+DATA_BALANCE_THRESHOLD_USED_UP=0
+# Unused
+if [[ "$DATA_REMAINING_PERCENT0" -eq "$DATA_BALANCE_THRESHOLD_UNUSED" ]];
+then
+DATA_BALANCE_STATUS="Unused"
+# Low
+elif [[ "$DATA_REMAINING_PERCENT0" -le "$DATA_BALANCE_THRESHOLD_LOW" && "$DATA_REMAINING_PERCENT0" -gt "$DATA_BALANCE_THRESHOLD_WARNING" ]];
+then
+DATA_BALANCE_STATUS="Low "
+# Warning
+elif [[ "$DATA_REMAINING_PERCENT0" -le "$DATA_BALANCE_THRESHOLD_WARNING" && "$DATA_REMAINING_PERCENT0" -gt "$DATA_BALANCE_THRESHOLD_CRITICAL" ]];
+then
+DATA_BALANCE_STATUS="Warning"
+# Critical
+elif [[ "$DATA_REMAINING_PERCENT0" -le "$DATA_BALANCE_THRESHOLD_CRITICAL" && "$DATA_REMAINING_PERCENT0" -gt "$DATA_BALANCE_THRESHOLD_USED_UP" ]];
+then
+DATA_BALANCE_STATUS="Critical"
+# Used Up
+elif [[ "$DATA_REMAINING_PERCENT0" -eq "$DATA_BALANCE_THRESHOLD_USED_UP" ]];
+then
+DATA_BALANCE_STATUS="Used Up"
+#
+else
+# Enough
+DATA_BALANCE_STATUS="Enough"
+fi
 }
 
 # SMS - Unread messages
@@ -563,6 +598,23 @@ Battery Level:			$BATTERY_LEVEL
 
 Battery Charge:			$BATTERY_PERCENT%
 Battery Status:			$BATTERY_STATUS
+
+EOT
+;;
+
+data)
+data_balance_available
+clear
+cat <<EOT
+*******************************************************************************
+$(date '+%A %d %B %Y')		$(date '+%-I:%M%p')
+*******************************************************************************
+
+Data Status:			$DATA_BALANCE_STATUS
+
+Data balance remaining:		${DATA_REMAINING_MB}MB / ${DATA_REMAINING_GB}GB 
+Data balance remaining:		${DATA_REMAINING_PERCENT}%
+Data Started on:		$DATA_START_DAY $(date '+%B %Y')
 
 EOT
 ;;
