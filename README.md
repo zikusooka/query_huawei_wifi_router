@@ -4,9 +4,10 @@
 Introduction
 ------------
 
-This script queries a Huawei LTE WiFi router (MiFi) to get detailed information such
-as signal strength, battery status, remaining data balance etc.  The following 
-information can be queried for using this tool:
+This script queries a Huawei LTE WiFi router (MiFi) to get detailed information
+such as signal strength, battery status, remaining data balance etc.
+
+The following information can be queried for using this tool:
 
 1. Device Name, Model, Serial IMEI, and IMSI Numbers
 
@@ -33,10 +34,13 @@ For updates to this, and other CLI tools, please follow me on twitter: **[@jziku
 As always, your contributions, and bug fixes are welcome
 
 
-Tested Devices
---------------
+Devices known to work
+---------------------
+(Tested)
 - Huawei E5373s-155
 
+(Not yet Tested)
+- Huawei B310s
 
 Requirements
 ------------
@@ -52,6 +56,10 @@ Usage: ./query_huawei_wifi_router.sh [IP_ADDRESS] [LOGIN_USER] [LOGIN_PASSWORD][
 Tasks
 -----
 info_all
+
+battery
+
+data
 
 reboot
 
