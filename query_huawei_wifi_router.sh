@@ -54,6 +54,7 @@ Usage: ./$(basename $0) [IP_ADDRESS] [LOGIN_USER] [LOGIN_PASSWORD][TASK (Optiona
 Tasks
 -----
 info_all
+battery
 reboot
 sms_read
 sms_send [NUMBER] [MESSAGE]
@@ -156,8 +157,35 @@ fi
 
 # Battery Status
 battery_status () {
+login
 BATTERY_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<BatteryStatus>).+?(?=</BatteryStatus>)")
 BATTERY_PERCENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<BatteryPercent>).+?(?=</BatteryPercent>)")
+# Battery level descriptions
+BATTERY_THRESHOLD_FULL=100
+BATTERY_THRESHOLD_LOW=35
+BATTERY_THRESHOLD_WARNING=20
+BATTERY_THRESHOLD_CRITICAL=10
+# Full
+if [[ "$BATTERY_PERCENT" -eq "$BATTERY_THRESHOLD_FULL" ]];
+then
+BATTERY_LEVEL="Full"
+# Low
+elif [[ "$BATTERY_PERCENT" -le "$BATTERY_THRESHOLD_LOW" && "$BATTERY_PERCENT" -gt "$BATTERY_THRESHOLD_WARNING" ]];
+then
+BATTERY_LEVEL="Low "
+# Warning
+elif [[ "$BATTERY_PERCENT" -le "$BATTERY_THRESHOLD_WARNING" && "$BATTERY_PERCENT" -gt "$BATTERY_THRESHOLD_CRITICAL" ]];
+then
+BATTERY_LEVEL="Warning"
+# Critical
+elif [[ "$BATTERY_PERCENT" -le "$BATTERY_THRESHOLD_CRITICAL" ]];
+then
+BATTERY_LEVEL="Critical"
+#
+else
+# Normal
+BATTERY_LEVEL="Normal"
+fi
 # Set Battery status type
 if [[ "$BATTERY_STATUS_CURRENT" = "1" ]];
 then
@@ -519,6 +547,22 @@ Battery Status:			$BATTERY_STATUS
 WiFi connected users:		$WIFI_CURRENT_USERS [$HOSTS_CONNECTED]
 
 New SMS Messages (Unread/All):	$SMS_COUNT_UNREAD ($SMS_COUNT_LOCAL_INBOX_UNREAD/$SMS_COUNT_LOCAL_INBOX_ALL)
+
+EOT
+;;
+
+battery)
+battery_status
+clear
+cat <<EOT
+*******************************************************************************
+$(date '+%A %d %B %Y')		$(date '+%-I:%M%p')
+*******************************************************************************
+
+Battery Level:			$BATTERY_LEVEL
+
+Battery Charge:			$BATTERY_PERCENT%
+Battery Status:			$BATTERY_STATUS
 
 EOT
 ;;
