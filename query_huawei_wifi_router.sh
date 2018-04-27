@@ -22,7 +22,8 @@
 
 # Variables
 CURL_CMD="/usr/bin/curl"
-CURL_OPTS="-L -s -S -m 60 -A 'Mozilla/5.0' -k -b MIFI_COOKIE_JAR -c MIFI_COOKIE_JAR"
+COOKIE_JAR_FILE=/tmp/cookies-$(basename $0)
+CURL_OPTS="-L -s -S -m 60 -A 'Mozilla/5.0' -k -b $COOKIE_JAR_FILE -c $COOKIE_JAR_FILE"
 MIFI_IP_ADDRESS=$1
 MIFI_LOGIN_ADMIN_USER="$2"
 MIFI_LOGIN_ADMIN_PASSWORD="$3"
