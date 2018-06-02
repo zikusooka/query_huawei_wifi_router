@@ -31,7 +31,7 @@ The following information can be queried for using this tool:
 
 For updates to this, and other CLI tools, please follow me on twitter: **[@jzikusooka](@jzikusooka)** or email me at *josephzik AT gmail.com*
 
-As always, your contributions, and bug fixes are welcome
+Your contributions are welcome.  For bug fixes, please open an issue
 
 
 Devices known to work
