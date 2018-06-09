@@ -59,9 +59,10 @@ Tasks
 info_all
 battery
 data
-reboot
+users
 sms_read
 sms_send [NUMBER] [MESSAGE]
+reboot
 
 EOT
 exit
@@ -200,6 +201,7 @@ fi
 
 # WiFi status
 wifi_status () {
+login
 WIFI_CONNECTION_STATUS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<WifiConnectionStatus>).+?(?=</WifiConnectionStatus>)")
 WIFI_CURRENT_USERS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<CurrentWifiUser>).+?(?=</CurrentWifiUser>)")
 }
@@ -207,14 +209,27 @@ WIFI_CURRENT_USERS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/stat
 # Devices connected to MiFi
 wifi_connected_devices () {
 login
+# Output type
+case $1 in
+hostname)
 # Using hostname
 $HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<HostName>).+?(?=</HostName>)" > $HOSTS_CONNECTED_OUTPUT_FILE 
-HOSTS_CONNECTED=$(paste -s -d"," $HOSTS_CONNECTED_OUTPUT_FILE)
-#
+;;
+mac_address)
 # Using mac address
-#$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<MacAddress>).+?(?=</MacAddress>)"
+$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<MacAddress>).+?(?=</MacAddress>)" > $HOSTS_CONNECTED_OUTPUT_FILE
+;;
+ip_address)
 # Using IP address
-#$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<IpAddress>).+?(?=</IpAddress>)"
+$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<IpAddress>).+?(?=</IpAddress>)" > $HOSTS_CONNECTED_OUTPUT_FILE
+;;
+*)
+# Using hostname
+$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<HostName>).+?(?=</HostName>)" > $HOSTS_CONNECTED_OUTPUT_FILE 
+;;
+esac
+# Extract clients
+HOSTS_CONNECTED=$(cat $HOSTS_CONNECTED_OUTPUT_FILE | while read LINE; do echo -e "\t\t\t\t $LINE" | sed "s: ::g"; done)
 }
 
 # Network Provider Info
@@ -586,7 +601,8 @@ Data Started on:		$DATA_START_DAY $(date '+%B %Y')
 Battery Charge:			$BATTERY_PERCENT%
 Battery Status:			$BATTERY_STATUS
 
-WiFi connected users:		$WIFI_CURRENT_USERS [$HOSTS_CONNECTED]
+WiFi connected users:		$WIFI_CURRENT_USERS
+$HOSTS_CONNECTED
 
 New SMS Messages (Unread/All):	$SMS_COUNT_UNREAD ($SMS_COUNT_LOCAL_INBOX_UNREAD/$SMS_COUNT_LOCAL_INBOX_ALL)
 
@@ -622,6 +638,36 @@ Data Status:			$DATA_BALANCE_STATUS
 Data balance remaining:		${DATA_REMAINING_MB}MB / ${DATA_REMAINING_GB}GB 
 Data balance remaining:		${DATA_REMAINING_PERCENT}%
 Data Started on:		$DATA_START_DAY $(date '+%B %Y')
+
+EOT
+;;
+
+users)
+wifi_status
+case $5 in
+1)
+wifi_connected_devices hostname
+;;
+2)
+wifi_connected_devices mac_address
+;;
+3)
+wifi_connected_devices ip_address
+;;
+*)
+wifi_connected_devices
+;;
+esac
+
+clear
+cat <<EOT
+*******************************************************************************
+$(date '+%A %d %B %Y')		$(date '+%-I:%M%p')
+*******************************************************************************
+
+Number of users:		[$WIFI_CURRENT_USERS]
+Device(s) online:		
+$HOSTS_CONNECTED
 
 EOT
 ;;

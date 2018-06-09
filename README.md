@@ -4,8 +4,9 @@
 Introduction
 ------------
 
-This script queries a Huawei LTE WiFi router (MiFi) to get detailed information
-such as signal strength, battery status, remaining data balance etc.
+This script queries a compatible Huawei LTE WiFi router (MiFi) to get detailed
+information such as signal strength, battery status, remaining data balance,
+number and addresses of currently connected device(s) etc.
 
 The following information can be queried for using this tool:
 
@@ -61,8 +62,10 @@ battery
 
 data
 
-reboot
+users
 
 sms_read
 
 sms_send [NUMBER] [MESSAGE]
+
+reboot
