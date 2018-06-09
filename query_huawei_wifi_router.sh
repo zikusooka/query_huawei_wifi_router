@@ -22,14 +22,14 @@
 
 # Variables
 CURL_CMD="/usr/bin/curl"
-COOKIE_JAR_FILE=/tmp/cookies-$(basename $0)
+COOKIE_JAR_FILE=/tmp/mifi_cookie_jar.$$
 CURL_OPTS="-L -s -S -m 60 -A 'Mozilla/5.0' -k -b $COOKIE_JAR_FILE -c $COOKIE_JAR_FILE"
 MIFI_IP_ADDRESS=$1
 MIFI_LOGIN_ADMIN_USER="$2"
 MIFI_LOGIN_ADMIN_PASSWORD="$3"
 MIFI_LOGIN_ADMIN_PASSWORD_BASE64=$(printf "$(printf "$MIFI_LOGIN_ADMIN_PASSWORD" | sha256sum |  cut -d ' ' -f 1)" | base64 -w 0)
 MIFI_ACTION=$4
-MIFI_LOGIN_OUTPUT_FILE=/tmp/router_login
+MIFI_LOGIN_OUTPUT_FILE=/tmp/mifi_login_output.$$
 HTTP_BROWSER_USERAGENT="Mozilla/5.0"
 HTTP_BROWSER_COMMAND="$CURL_CMD $CURL_OPTS"
 SMS_MESSAGE_RAW_OUTPUT_FILE=/tmp/router_sms_message
