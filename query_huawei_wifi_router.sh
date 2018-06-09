@@ -99,9 +99,6 @@ MIFI_LOGIN_SERVER_PASSWORD_BASE64="$(printf "$(printf "${MIFI_ADMIN_USER_PASSWOR
 # Login
 login () {
 server_session_token_info
-#
-# Remove any existing login output file
-[[ -e $MIFI_LOGIN_OUTPUT_FILE ]] && rm -f $MIFI_LOGIN_OUTPUT_FILE
 # Connect and Login
 $HTTP_BROWSER_COMMAND -o $MIFI_LOGIN_OUTPUT_FILE $HTTP_BROWSER_URL/api/user/login \
 	-H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
@@ -111,6 +108,8 @@ $HTTP_BROWSER_COMMAND -o $MIFI_LOGIN_OUTPUT_FILE $HTTP_BROWSER_URL/api/user/logi
 	-d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Username>$MIFI_LOGIN_ADMIN_USER</Username><Password>$(printf "$(printf "$MIFI_LOGIN_ADMIN_USER$MIFI_LOGIN_ADMIN_PASSWORD_BASE64$MIFI_LOGIN_SERVER_TOKEN" | sha256sum | cut -d ' ' -f 1)" | base64 -w 0)</Password><password_type>4</password_type></request>"
 # Get login response
 LOGIN_RESPONSE=$(grep -oP "(?<=<response>).+?(?=</response>)" $MIFI_LOGIN_OUTPUT_FILE)
+# Remove temp mifi login output file
+[[ -e $MIFI_LOGIN_OUTPUT_FILE ]] && rm -f $MIFI_LOGIN_OUTPUT_FILE
 if [ "$LOGIN_RESPONSE" = "OK" ];
 then
 echo "Logged in to your WiFi router"
@@ -540,6 +539,11 @@ sms_unread_count
 sms_count_local_inbox
 }
 
+clean_up () {
+# Remove temp cookie jar file
+[[ -e $COOKIE_JAR_FILE ]] && rm -f $COOKIE_JAR_FILE
+}
+
 
 
 #################
@@ -639,3 +643,6 @@ $0 $MIFI_IP_ADDRESS $MIFI_LOGIN_ADMIN_USER $MIFI_LOGIN_ADMIN_PASSWORD info_all
 ;;
 
 esac
+
+# Clean up 
+clean_up
