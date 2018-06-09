@@ -126,7 +126,7 @@ Login response: <$LOGIN_RESPONSE>
 $MIFI_LOGIN_ADMIN_PASSWORD_BASE64
 
 EOT
-exit 255
+exit 254
 fi
 }
 
