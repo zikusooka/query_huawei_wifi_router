@@ -34,6 +34,8 @@ HTTP_BROWSER_USERAGENT="Mozilla/5.0"
 HTTP_BROWSER_COMMAND="$CURL_CMD $CURL_OPTS"
 SMS_MESSAGE_RAW_OUTPUT_FILE=/tmp/router_sms_message
 HOSTS_CONNECTED_OUTPUT_FILE=/tmp/router_wifi_connected_hosts
+TERM=linux
+export TERM
 
 
 
