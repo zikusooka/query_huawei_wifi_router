@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This script queries a Huawei LTE WiFi router (MiFi) to get detailed information such
 # as signal strength, battery status, remaining data balance etc.
 #
