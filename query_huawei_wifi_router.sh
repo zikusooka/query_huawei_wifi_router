@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This script queries a Huawei LTE WiFi router (MiFi) to get detailed information such
 # as signal strength, battery status, remaining data balance etc.
 #
@@ -27,7 +27,7 @@ CURL_OPTS="-L -s -S -m 60 -A 'Mozilla/5.0' -k -b $COOKIE_JAR_FILE -c $COOKIE_JAR
 MIFI_IP_ADDRESS=$1
 MIFI_LOGIN_ADMIN_USER="$2"
 MIFI_LOGIN_ADMIN_PASSWORD="$3"
-MIFI_LOGIN_ADMIN_PASSWORD_BASE64=$(printf "$(printf "$MIFI_LOGIN_ADMIN_PASSWORD" | sha256sum |  cut -d ' ' -f 1)" | base64 -w 0)
+MIFI_LOGIN_ADMIN_PASSWORD_BASE64=$(printf "$(printf "$MIFI_LOGIN_ADMIN_PASSWORD" | sha256sum |  cut -d ' ' -f 1)" | base64 | tr -d '\n')
 MIFI_ACTION=$4
 MIFI_LOGIN_OUTPUT_FILE=/tmp/mifi_login_output.$$
 HTTP_BROWSER_USERAGENT="Mozilla/5.0"
@@ -36,7 +36,6 @@ SMS_MESSAGE_RAW_OUTPUT_FILE=/tmp/router_sms_message
 HOSTS_CONNECTED_OUTPUT_FILE=/tmp/router_wifi_connected_hosts
 TERM=linux
 export TERM
-
 
 
 ###############
@@ -76,7 +75,7 @@ PING_TIMEOUT=3
 ping -c $PING_COUNT -W $PING_TIMEOUT $MIFI_IP_ADDRESS > /dev/null 2>&1
 MIFI_REACHEABLE=$?
 #
-# Notify and quit when there's NO Internet 
+# Notify and quit when there's NO Internet
 if [ "$MIFI_REACHEABLE" != "0" ];
 then
 clear
@@ -91,10 +90,10 @@ calc(){ awk "BEGIN{ print $* }" ;}
 
 server_session_token_info () {
 HTTP_BROWSER_URL=http://$MIFI_IP_ADDRESS
-MIFI_LOGIN_SERVER_COOKIE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo | grep -oP "(?<=<SesInfo>).+?(?=</SesInfo>)")
-MIFI_LOGIN_SERVER_TOKEN=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo | grep -oP "(?<=<TokInfo>).+?(?=</TokInfo>)")
-MIFI_ADMIN_USER_PASSWORD_TOKEN="${MIFI_LOGIN_ADMIN_USER}${MIFI_LOGIN_ADMIN_PASSWORD}${MIFI_LOGIN_SERVER_TOKEN}" 
-MIFI_LOGIN_SERVER_PASSWORD_BASE64="$(printf "$(printf "${MIFI_ADMIN_USER_PASSWORD_TOKEN}" | sha256sum | cut -d ' ' -f 1)" | base64 -w 0)"
+MIFI_LOGIN_SERVER_COOKIE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo | sed 's/.*<SesInfo>\(.*\)<\/SesInfo>.*/\1/')
+MIFI_LOGIN_SERVER_TOKEN=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo | sed 's/.*<TokInfo>\(.*\)<\/TokInfo>.*/\1/')
+MIFI_ADMIN_USER_PASSWORD_TOKEN="${MIFI_LOGIN_ADMIN_USER}${MIFI_LOGIN_ADMIN_PASSWORD}${MIFI_LOGIN_SERVER_TOKEN}"
+MIFI_LOGIN_SERVER_PASSWORD_BASE64="$(printf "$(printf "${MIFI_ADMIN_USER_PASSWORD_TOKEN}" | sha256sum | cut -d ' ' -f 1)" | base64 | tr -d '\n')"
 }
 
 # Login
@@ -102,13 +101,13 @@ login () {
 server_session_token_info
 # Connect and Login
 $HTTP_BROWSER_COMMAND -o $MIFI_LOGIN_OUTPUT_FILE $HTTP_BROWSER_URL/api/user/login \
-	-H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
-	-H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
-	-H "X-Requested-With: XMLHttpRequest" \
-	-H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
-	-d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Username>$MIFI_LOGIN_ADMIN_USER</Username><Password>$(printf "$(printf "$MIFI_LOGIN_ADMIN_USER$MIFI_LOGIN_ADMIN_PASSWORD_BASE64$MIFI_LOGIN_SERVER_TOKEN" | sha256sum | cut -d ' ' -f 1)" | base64 -w 0)</Password><password_type>4</password_type></request>"
+        -H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
+        -H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
+        -H "X-Requested-With: XMLHttpRequest" \
+        -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
+        -d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Username>$MIFI_LOGIN_ADMIN_USER</Username><Password>$(printf "$(printf "$MIFI_LOGIN_ADMIN_USER$MIFI_LOGIN_ADMIN_PASSWORD_BASE64$MIFI_LOGIN_SERVER_TOKEN" | sha256sum | cut -d ' ' -f 1)" | base64 | tr -d '\n')</Password><password_type>4</password_type></request>"
 # Get login response
-LOGIN_RESPONSE=$(grep -oP "(?<=<response>).+?(?=</response>)" $MIFI_LOGIN_OUTPUT_FILE)
+LOGIN_RESPONSE=$(cat "$MIFI_LOGIN_OUTPUT_FILE" | sed 's/.*<response>\(.*\)<\/response>.*/\1/')
 # Remove temp mifi login output file
 [[ -e $MIFI_LOGIN_OUTPUT_FILE ]] && rm -f $MIFI_LOGIN_OUTPUT_FILE
 if [ "$LOGIN_RESPONSE" = "OK" ];
@@ -135,25 +134,25 @@ fi
 # Device Info
 device_information () {
 login
-DEVICE_NAME=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep -oP "(?<=<DeviceName>).+?(?=</DeviceName>)")
-DEVICE_SERIAL=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep -oP "(?<=<SerialNumber>).+?(?=</SerialNumber>)")
-DEVICE_IMEI=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep -oP "(?<=<Imei>).+?(?=</Imei>)")
-DEVICE_IMSI=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep -oP "(?<=<Imsi>).+?(?=</Imsi>)")
-DEVICE_MAC1=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep -oP "(?<=<MacAddress1>).+?(?=</MacAddress1>)")
-DEVICE_CLASS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep -oP "(?<=<Classify>).+?(?=</Classify>)")
-DEVICE_ICCID=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep -oP "(?<=<Iccid>).+?(?=</Iccid>)")
+DEVICE_NAME=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep '<DeviceName>' | sed 's/.*<DeviceName>\(.*\)<\/DeviceName>.*/\1/')
+DEVICE_SERIAL=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep '<SerialNumber>' | sed 's/.*<SerialNumber>\(.*\)<\/SerialNumber>.*/\1/')
+DEVICE_IMEI=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep '<Imei>' | sed 's/.*<Imei>\(.*\)<\/Imei>.*/\1/')
+DEVICE_IMSI=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep '<Imsi>' | sed 's/.*<Imsi>\(.*\)<\/Imsi>.*/\1/')
+DEVICE_MAC1=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep '<MacAddress1>' | sed 's/.*<MacAddress1>\(.*\)<\/MacAddress1>.*/\1/')
+DEVICE_CLASS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep '<Classify>' | sed 's/.*<Classify>\(.*\)<\/Classify>.*/\1/')
+DEVICE_ICCID=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/information | grep '<Iccid>' | sed 's/.*<Iccid>\(.*\)<\/Iccid>.*/\1/')
 }
 
 # Sim Status
 sim_status () {
-DEVICE_SIM_LOCK_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<simlockStatus>).+?(?=</simlockStatus>)")
+DEVICE_SIM_LOCK_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'simlockStatus' | sed 's/.*<simlockStatus>\(.*\)<\/simlockStatus>.*/\1/')
 if [ "$DEVICE_SIM_LOCK_STATUS_CURRENT" = "0" ];
 then
 DEVICE_SIM_LOCK_STATUS="Unlocked"
 else
 DEVICE_SIM_LOCK_STATUS="Locked"
 fi
-#DEVICE_SIM_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<simlockStatus>).+?(?=</simlockStatus>)")
+#DEVICE_SIM_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'simlockStatus' | sed 's/.*<simlockStatus>\(.*\)<\/simlockStatus>.*/\1/')
 #
 # Alternative for Sim state and Lock
 #api/monitoring/converged-status
@@ -162,8 +161,8 @@ fi
 # Battery Status
 battery_status () {
 login
-BATTERY_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<BatteryStatus>).+?(?=</BatteryStatus>)")
-BATTERY_PERCENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<BatteryPercent>).+?(?=</BatteryPercent>)")
+BATTERY_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'BatteryStatus' | sed 's/.*<BatteryStatus>\(.*\)<\/BatteryStatus>.*/\1/')
+BATTERY_PERCENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'BatteryPercent' | sed 's/.*<BatteryPercent>\(.*\)<\/BatteryPercent>.*/\1/')
 # Battery level descriptions
 BATTERY_THRESHOLD_FULL=100
 BATTERY_THRESHOLD_LOW=35
@@ -202,8 +201,8 @@ fi
 # WiFi status
 wifi_status () {
 login
-WIFI_CONNECTION_STATUS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<WifiConnectionStatus>).+?(?=</WifiConnectionStatus>)")
-WIFI_CURRENT_USERS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<CurrentWifiUser>).+?(?=</CurrentWifiUser>)")
+WIFI_CONNECTION_STATUS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'WifiConnectionStatus' | sed 's/.*<WifiConnectionStatus>\(.*\)<\/WifiConnectionStatus>.*/\1/')
+WIFI_CURRENT_USERS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'CurrentWifiUser' | sed 's/.*<CurrentWifiUser>\(.*\)<\/CurrentWifiUser>.*/\1/')
 }
 
 # Devices connected to MiFi
@@ -213,19 +212,19 @@ login
 case $1 in
 hostname)
 # Using hostname
-$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<HostName>).+?(?=</HostName>)" > $HOSTS_CONNECTED_OUTPUT_FILE 
+$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep 'HostName' | sed 's/.*<HostName>\(.*\)<\/HostName>.*/\1/' > $HOSTS_CONNECTED_OUTPUT_FILE
 ;;
 mac_address)
 # Using mac address
-$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<MacAddress>).+?(?=</MacAddress>)" > $HOSTS_CONNECTED_OUTPUT_FILE
+$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep 'MacAddress' | sed 's/.*<MacAddress>\(.*\)<\/MacAddress>.*/\1/' > $HOSTS_CONNECTED_OUTPUT_FILE
 ;;
 ip_address)
 # Using IP address
-$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<IpAddress>).+?(?=</IpAddress>)" > $HOSTS_CONNECTED_OUTPUT_FILE
+$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep 'IpAddress' | sed 's/.*<IpAddress>\(.*\)<\/IpAddress>.*/\1/' > $HOSTS_CONNECTED_OUTPUT_FILE
 ;;
 *)
 # Using hostname
-$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep -oP "(?<=<HostName>).+?(?=</HostName>)" > $HOSTS_CONNECTED_OUTPUT_FILE 
+$HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/wlan/host-list | grep 'HostName' | sed 's/.*<HostName>\(.*\)<\/HostName>.*/\1/' > $HOSTS_CONNECTED_OUTPUT_FILE
 ;;
 esac
 # Extract clients
@@ -234,9 +233,9 @@ HOSTS_CONNECTED=$(cat $HOSTS_CONNECTED_OUTPUT_FILE | while read LINE; do echo -e
 
 # Network Provider Info
 network_provider_info () {
-NETWORK_PROVIDER=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/net/current-plmn | grep -oP "(?<=<FullName>).+?(?=</FullName>)")
-MCC_MNC_CODE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/net/current-plmn | grep -oP "(?<=<Numeric>).+?(?=</Numeric>)")
-NETWORK_CONNECTION_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<ConnectionStatus>).+?(?=</ConnectionStatus>)")
+NETWORK_PROVIDER=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/net/current-plmn | grep 'FullName' | sed 's/.*<FullName>\(.*\)<\/FullName>.*/\1/')
+MCC_MNC_CODE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/net/current-plmn | grep 'Numeric' | sed 's/.*<Numeric>\(.*\)<\/Numeric>.*/\1/')
+NETWORK_CONNECTION_STATUS_CURRENT=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'ConnectionStatus' | sed 's/.*<ConnectionStatus>\(.*\)<\/ConnectionStatus>.*/\1/')
 # Define connection status
 case $NETWORK_CONNECTION_STATUS_CURRENT in
 7|11|14|37)
@@ -260,7 +259,7 @@ NETWORK_CONNECTION_STATUS="Disconnected"
 903)
 NETWORK_CONNECTION_STATUS="Disconnecting"
 ;;
-904)  
+904)
 NETWORK_CONNECTION_STATUS="Connection failed or disabled"
 ;;
 *)
@@ -271,35 +270,35 @@ esac
 
 # Signal Info
 signal_info () {
-CURRENT_SIGNAL_STRENGTH=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<SignalIcon>).+?(?=</SignalIcon>)")
+CURRENT_SIGNAL_STRENGTH=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'SignalIcon' | sed 's/.*<SignalIcon>\(.*\)<\/SignalIcon>.*/\1/')
 # Signal bars
 case $CURRENT_SIGNAL_STRENGTH in
 5)
 NUMBER_OF_BARS=$(printf "\u2581\u2582\u2583\u2584\u2585")
 ;;
 4)
-NUMBER_OF_BARS=$(printf "\u2581\u2582\u2583\u2584") 
+NUMBER_OF_BARS=$(printf "\u2581\u2582\u2583\u2584")
 ;;
 3)
-NUMBER_OF_BARS=$(printf "\u2581\u2582\u2583") 
+NUMBER_OF_BARS=$(printf "\u2581\u2582\u2583")
 ;;
 2)
-NUMBER_OF_BARS=$(printf "\u2581\u2582") 
+NUMBER_OF_BARS=$(printf "\u2581\u2582")
 ;;
 1)
-NUMBER_OF_BARS=$(printf "\u2581") 
+NUMBER_OF_BARS=$(printf "\u2581")
 ;;
 *)
-NUMBER_OF_BARS=$(printf "") 
+NUMBER_OF_BARS=$(printf "")
 ;;
 esac
 #
-MAXIMUM_SIGNAL_STRENGTH=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<maxsignal>).+?(?=</maxsignal>)")
+MAXIMUM_SIGNAL_STRENGTH=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'maxsignal' | sed 's/.*<maxsignal>\(.*\)<\/maxsignal>.*/\1/')
 SIGNAL_PERCENT=$(calc "$CURRENT_SIGNAL_STRENGTH/$MAXIMUM_SIGNAL_STRENGTH"*100)%
-NETWORK_CELL_ID=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/signal | grep -oP "(?<=<cell_id>).+?(?=</cell_id>)")
+NETWORK_CELL_ID=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/device/signal | grep 'cell_id' | sed 's/.*<cell_id>\(.*\)<\/cell_id>.*/\1/')
 #
 # Current Network Type
-CURRENT_NETWORK_TYPE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<CurrentNetworkType>).+?(?=</CurrentNetworkType>)")
+CURRENT_NETWORK_TYPE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'CurrentNetworkType' | sed 's/.*<CurrentNetworkType>\(.*\)<\/CurrentNetworkType>.*/\1/')
 case $CURRENT_NETWORK_TYPE in
 0)
 NETWORK_TYPE="No Service"
@@ -387,30 +386,25 @@ esac
 
 # WAN IP, Primary, Secondary DNS Addresses
 ip_address_info () {
-WAN_IP_ADDRESS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<WanIPAddress>).+?(?=</WanIPAddress>)")
-PRIMARY_DNS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<PrimaryDns>).+?(?=</PrimaryDns>)")
-SECONDARY_DNS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep -oP "(?<=<SecondaryDns>).+?(?=</SecondaryDns>)")
+WAN_IP_ADDRESS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'WanIPAddress' | sed 's/.*<WanIPAddress>\(.*\)<\/WanIPAddress>.*/\1/')
+PRIMARY_DNS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'PrimaryDns' | sed 's/.*<PrimaryDns>\(.*\)<\/PrimaryDns>.*/\1/')
+SECONDARY_DNS=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/status | grep 'SecondaryDns' | sed 's/.*<SecondaryDns>\(.*\)<\/SecondaryDns>.*/\1/')
 }
 
 # Data Balance - Available
 data_balance_available () {
 login
-DATA_BUNDLE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/start_date | grep -oP "(?<=<DataLimit>).+?(?=</DataLimit>)")
-DATA_START_DAY=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/start_date | grep -oP "(?<=<StartDay>).+?(?=</StartDay>)")
-DATA_USED_DOWNLOAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/month_statistics | grep -oP "(?<=<CurrentMonthDownload>).+?(?=</CurrentMonthDownload>)")
-DATA_USED_UPLOAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/month_statistics | grep -oP "(?<=<CurrentMonthUpload>).+?(?=</CurrentMonthUpload>)")
+DATA_BUNDLE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/start_date | grep 'DataLimit' | sed 's/.*<DataLimit>\(.*\)<\/DataLimit>.*/\1/')
+DATA_START_DAY=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/start_date | grep 'StartDay' | sed 's/.*<StartDay>\(.*\)<\/StartDay>.*/\1/')
+DATA_USED_DOWNLOAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/month_statistics | grep 'CurrentMonthDownload' | sed 's/.*<CurrentMonthDownload>\(.*\)<\/CurrentMonthDownload>.*/\1/')
+DATA_USED_UPLOAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/month_statistics | grep 'CurrentMonthUpload' | sed 's/.*<CurrentMonthUpload>\(.*\)<\/CurrentMonthUpload>.*/\1/')
 # Data Limit in Bytes
-if test $(echo $DATA_BUNDLE | grep -i GB);
-then
-DATA_LIMIT=$(calc $(echo "$DATA_BUNDLE" | sed "s/GB//")*1073741824)
-
-elif test $(echo $DATA_BUNDLE | grep -i MB);
-then
-DATA_LIMIT=$(calc $(echo "$DATA_BUNDLE" | sed "s/MB//")*1048576)
-
-elif test $(echo $DATA_BUNDLE | grep -i KB);
-then
-DATA_LIMIT=$(calc $(echo "$DATA_BUNDLE" | sed "s/KB//")*1024)
+if [[ "$DATA_BUNDLE" = *"GB"* ]]; then
+	DATA_LIMIT=$(calc $(echo "$DATA_BUNDLE" | sed "s/GB//")*1073741824)
+elif [[ "$DATA_BUNDLE" = *"MB" ]]; then
+	DATA_LIMIT=$(calc $(echo "$DATA_BUNDLE" | sed "s/MB//")*1048576)
+elif [[ "$DATA_BUNDLE" = *"KB" ]]; then
+	DATA_LIMIT=$(calc $(echo "$DATA_BUNDLE" | sed "s/KB//")*1024)
 fi
 # Data left
 DATA_USED=$(calc $DATA_USED_DOWNLOAD+$DATA_USED_UPLOAD)
@@ -456,53 +450,53 @@ fi
 
 # SMS - Unread messages
 sms_unread_count () {
-SMS_COUNT_UNREAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/check-notifications | grep -oP "(?<=<UnreadMessage>).+?(?=</UnreadMessage>)")
+SMS_COUNT_UNREAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/monitoring/check-notifications | grep 'UnreadMessage' | sed 's/.*<UnreadMessage>\(.*\)<\/UnreadMessage>.*/\1/')
 }
 
 sms_count_local_inbox () {
 login
-SMS_COUNT_LOCAL_INBOX_UNREAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/sms/sms-count | grep -oP "(?<=<LocalUnread>).+?(?=</LocalUnread>)")
-SMS_COUNT_LOCAL_INBOX_ALL=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/sms/sms-count | grep -oP "(?<=<LocalInbox>).+?(?=</LocalInbox>)")
+SMS_COUNT_LOCAL_INBOX_UNREAD=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/sms/sms-count | grep 'LocalUnread' | sed 's/.*<LocalUnread>\(.*\)<\/LocalUnread>.*/\1/')
+SMS_COUNT_LOCAL_INBOX_ALL=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/sms/sms-count | grep 'LocalInbox' | sed 's/.*<LocalInbox>\(.*\)<\/LocalInbox>.*/\1/')
 }
 
-# SMS - Read 1 SMS message 
+# SMS - Read 1 SMS message
 read_sms_message_one () {
 SMS_MESSAGE_COUNT=1
 login
 server_session_token_info
 #
 $HTTP_BROWSER_COMMAND -o $SMS_MESSAGE_RAW_OUTPUT_FILE $HTTP_BROWSER_URL/api/sms/sms-list \
-	-H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
-	-H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
-	-H "X-Requested-With: XMLHttpRequest" \
-	-H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
-	-d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><PageIndex>1</PageIndex><ReadCount>$SMS_MESSAGE_COUNT</ReadCount><BoxType>1</BoxType><SortType>0</SortType><Ascending>0</Ascending><UnreadPreferred>0</UnreadPreferred></request>"
+        -H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
+        -H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
+        -H "X-Requested-With: XMLHttpRequest" \
+        -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
+        -d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><PageIndex>1</PageIndex><ReadCount>$SMS_MESSAGE_COUNT</ReadCount><BoxType>1</BoxType><SortType>0</SortType><Ascending>0</Ascending><UnreadPreferred>0</UnreadPreferred></request>"
 # Extract SMS message
-SMS_MESSAGE_INDEX=$(grep -oP "(?<=<Index>).+?(?=</Index>)" $SMS_MESSAGE_RAW_OUTPUT_FILE)
-SMS_MESSAGE_DATE=$(grep -oP "(?<=<Date>).+?(?=</Date>)" $SMS_MESSAGE_RAW_OUTPUT_FILE)
-SMS_MESSAGE_FROM=$(grep -oP "(?<=<Phone>).+?(?=</Phone>)" $SMS_MESSAGE_RAW_OUTPUT_FILE)
-SMS_MESSAGE_BODY=$(grep -oP "(?<=<Content>).+?(?=</Content>)" $SMS_MESSAGE_RAW_OUTPUT_FILE)
+SMS_MESSAGE_INDEX=$(cat "$SMS_MESSAGE_RAW_OUTPUT_FILE" | sed 's/.*<Index>\(.*\)<\/Index>.*/\1/')
+SMS_MESSAGE_DATE=$(cat "$SMS_MESSAGE_RAW_OUTPUT_FILE" | sed 's/.*<Date>\(.*\)<\/Date>.*/\1/')
+SMS_MESSAGE_FROM=$(cat "$SMS_MESSAGE_RAW_OUTPUT_FILE" | sed 's/.*<Phone>\(.*\)<\/Phone>.*/\1/')
+SMS_MESSAGE_BODY=$(cat "$SMS_MESSAGE_RAW_OUTPUT_FILE" | sed 's/.*<Content>\(.*\)<\/Content>.*/\1/')
 # Print message
 clear
 cat <<EOT
-Index:		$SMS_MESSAGE_INDEX
-Date:		$SMS_MESSAGE_DATE
-From:		$SMS_MESSAGE_FROM
-Body:		$SMS_MESSAGE_BODY
+Index:          $SMS_MESSAGE_INDEX
+Date:           $SMS_MESSAGE_DATE
+From:           $SMS_MESSAGE_FROM
+Body:           $SMS_MESSAGE_BODY
 EOT
 
 # Set SMS message to already-read status
 login
 server_session_token_info
 $HTTP_BROWSER_COMMAND -o /dev/null $HTTP_BROWSER_URL/api/sms/set-read \
-	-H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
-	-H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
-	-H "X-Requested-With: XMLHttpRequest" \
-	-H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
-	-d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Index>$SMS_MESSAGE_INDEX</Index></request>"
+        -H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
+        -H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
+        -H "X-Requested-With: XMLHttpRequest" \
+        -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
+        -d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Index>$SMS_MESSAGE_INDEX</Index></request>"
 }
 
-# SMS - Send message 
+# SMS - Send message
 send_sms_message () {
 SMS_DATE_NOW=$(date +'%Y-%m-%d %T')
 SMS_PHONE_RECIPIENT=$1
@@ -518,11 +512,11 @@ login
 server_session_token_info
 #
 $HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/sms/send-sms \
-	-H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
-	-H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
-	-H "X-Requested-With: XMLHttpRequest" \
-	-H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
-	-d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Index>-1</Index><Phones><Phone>$SMS_PHONE_RECIPIENT</Phone></Phones><Sca></Sca><Content>$SMS_TEXT</Content><Length>$SMS_LENGTH</Length><Reserved>1</Reserved><Date>$SMS_DATE_NOW</Date></request>"
+        -H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
+        -H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
+        -H "X-Requested-With: XMLHttpRequest" \
+        -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
+        -d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Index>-1</Index><Phones><Phone>$SMS_PHONE_RECIPIENT</Phone></Phones><Sca></Sca><Content>$SMS_TEXT</Content><Length>$SMS_LENGTH</Length><Reserved>1</Reserved><Date>$SMS_DATE_NOW</Date></request>"
 }
 
 # Reboot
@@ -532,11 +526,11 @@ server_session_token_info
 #
 echo "Rebooting MiFi router, please wait ..."
 $HTTP_BROWSER_COMMAND -o /dev/null $HTTP_BROWSER_URL/api/device/control \
-	-H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
-	-H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
-	-H "X-Requested-With: XMLHttpRequest" \
-	-H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
-	-d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Control>1</Control></request>"
+        -H "__RequestVerificationToken: $MIFI_LOGIN_SERVER_TOKEN" \
+        -H "Cookie: $MIFI_LOGIN_SERVER_COOKIE" \
+        -H "X-Requested-With: XMLHttpRequest" \
+        -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
+        -d "<?xml version=\"1.0\" encoding=\"UTF-8\"?><request><Control>1</Control></request>"
 }
 
 # All information
@@ -576,35 +570,35 @@ all_available_information
 # Print info
 clear
 cat <<EOT
-Device Name:			Huawei $DEVICE_CLASS
-Device Model:			$DEVICE_NAME
-Device Serial:			$DEVICE_SERIAL
-Device Imei:			$DEVICE_IMEI
-Device Imsi:			$DEVICE_IMSI
-Device Iccid:			$DEVICE_ICCID
-Sim Lock Status:		$DEVICE_SIM_LOCK_STATUS
+Device Name:                    Huawei $DEVICE_CLASS
+Device Model:                   $DEVICE_NAME
+Device Serial:                  $DEVICE_SERIAL
+Device Imei:                    $DEVICE_IMEI
+Device Imsi:                    $DEVICE_IMSI
+Device Iccid:                   $DEVICE_ICCID
+Sim Lock Status:                $DEVICE_SIM_LOCK_STATUS
 
-Network Connection status:	$NETWORK_CONNECTION_STATUS
-Network Provider:		$NETWORK_PROVIDER ($MCC_MNC_CODE)
-Network Type:			$NETWORK_TYPE
-Network Signal strength:	$NUMBER_OF_BARS ($SIGNAL_PERCENT)
-Network Cell Tower:		$NETWORK_CELL_ID
+Network Connection status:      $NETWORK_CONNECTION_STATUS
+Network Provider:               $NETWORK_PROVIDER ($MCC_MNC_CODE)
+Network Type:                   $NETWORK_TYPE
+Network Signal strength:        $NUMBER_OF_BARS ($SIGNAL_PERCENT)
+Network Cell Tower:             $NETWORK_CELL_ID
 
-WAN IP Address:			$WAN_IP_ADDRESS
-Primary DNS Address:		$PRIMARY_DNS
-Secondary DNS Address:		$SECONDARY_DNS
+WAN IP Address:                 $WAN_IP_ADDRESS
+Primary DNS Address:            $PRIMARY_DNS
+Secondary DNS Address:          $SECONDARY_DNS
 
-Data balance remaining:		${DATA_REMAINING_MB}MB / ${DATA_REMAINING_GB}GB 
-Data balance remaining:		${DATA_REMAINING_PERCENT}%
-Data Started on:		$DATA_START_DAY $(date '+%B %Y')
+Data balance remaining:         ${DATA_REMAINING_MB}MB / ${DATA_REMAINING_GB}GB
+Data balance remaining:         ${DATA_REMAINING_PERCENT}%
+Data Started on:                $DATA_START_DAY $(date '+%B %Y')
 
-Battery Charge:			$BATTERY_PERCENT%
-Battery Status:			$BATTERY_STATUS
+Battery Charge:                 $BATTERY_PERCENT%
+Battery Status:                 $BATTERY_STATUS
 
-WiFi connected users:		$WIFI_CURRENT_USERS
+WiFi connected users:           $WIFI_CURRENT_USERS
 $HOSTS_CONNECTED
 
-New SMS Messages (Unread/All):	$SMS_COUNT_UNREAD ($SMS_COUNT_LOCAL_INBOX_UNREAD/$SMS_COUNT_LOCAL_INBOX_ALL)
+New SMS Messages (Unread/All):  $SMS_COUNT_UNREAD ($SMS_COUNT_LOCAL_INBOX_UNREAD/$SMS_COUNT_LOCAL_INBOX_ALL)
 
 EOT
 ;;
@@ -614,13 +608,13 @@ battery_status
 clear
 cat <<EOT
 *******************************************************************************
-$(date '+%A %d %B %Y')		$(date '+%-I:%M%p')
+$(date '+%A %d %B %Y')          $(date '+%-I:%M%p')
 *******************************************************************************
 
-Battery Level:			$BATTERY_LEVEL
+Battery Level:                  $BATTERY_LEVEL
 
-Battery Charge:			$BATTERY_PERCENT%
-Battery Status:			$BATTERY_STATUS
+Battery Charge:                 $BATTERY_PERCENT%
+Battery Status:                 $BATTERY_STATUS
 
 EOT
 ;;
@@ -630,14 +624,14 @@ data_balance_available
 clear
 cat <<EOT
 *******************************************************************************
-$(date '+%A %d %B %Y')		$(date '+%-I:%M%p')
+$(date '+%A %d %B %Y')          $(date '+%-I:%M%p')
 *******************************************************************************
 
-Data Status:			$DATA_BALANCE_STATUS
+Data Status:                    $DATA_BALANCE_STATUS
 
-Data balance remaining:		${DATA_REMAINING_MB}MB / ${DATA_REMAINING_GB}GB 
-Data balance remaining:		${DATA_REMAINING_PERCENT}%
-Data Started on:		$DATA_START_DAY $(date '+%B %Y')
+Data balance remaining:         ${DATA_REMAINING_MB}MB / ${DATA_REMAINING_GB}GB
+Data balance remaining:         ${DATA_REMAINING_PERCENT}%
+Data Started on:                $DATA_START_DAY $(date '+%B %Y')
 
 EOT
 ;;
@@ -662,11 +656,11 @@ esac
 clear
 cat <<EOT
 *******************************************************************************
-$(date '+%A %d %B %Y')		$(date '+%-I:%M%p')
+$(date '+%A %d %B %Y')          $(date '+%-I:%M%p')
 *******************************************************************************
 
-Number of users:		[$WIFI_CURRENT_USERS]
-Device(s) online:		
+Number of users:                [$WIFI_CURRENT_USERS]
+Device(s) online:
 $HOSTS_CONNECTED
 
 EOT
@@ -690,5 +684,5 @@ $0 $MIFI_IP_ADDRESS $MIFI_LOGIN_ADMIN_USER $MIFI_LOGIN_ADMIN_PASSWORD info_all
 
 esac
 
-# Clean up 
+# Clean up
 clean_up

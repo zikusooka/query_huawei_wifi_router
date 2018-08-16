@@ -39,6 +39,7 @@ Devices known to work
 ---------------------
 (Tested)
 - Huawei E5373s-155
+- Huawei B529s-23a
 
 (Not yet Tested)
 - Huawei B310s
