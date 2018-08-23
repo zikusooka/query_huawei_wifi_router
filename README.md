@@ -3,6 +3,7 @@
 
 Introduction
 ------------
+[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/fold_left.svg?style=social&label=Follow%20%40jzikusooka)](https://twitter.com/jzikusooka)
 
 This script queries a compatible Huawei LTE WiFi router (MiFi) to get detailed
 information such as signal strength, battery status, remaining data balance,
