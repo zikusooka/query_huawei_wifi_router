@@ -46,6 +46,12 @@ Devices known to work
 (Not yet Tested)
 - Huawei B310s
 
+Supported Platforms
+-------------------
+- Linux
+- Mac OS
+- FreeBSD? (Not yet tested)
+
 Requirements
 ------------
 1. coreutils 8+ packages with base64 and sha256sum utilities
