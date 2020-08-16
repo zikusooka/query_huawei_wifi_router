@@ -94,6 +94,7 @@ calc(){ awk "BEGIN{ print $* }" ;}
 
 server_session_token_info () {
 HTTP_BROWSER_URL=http://$IP_ADDRESS
+FIRST_GET_TO_STORE_COOKIE_SESSION=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/html/home.html)
 LOGIN_SERVER_COOKIE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo | sed -ne '/<SesInfo>/s#\s*<[^>]*>\s*##gp')
 LOGIN_SERVER_TOKEN=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo | sed -ne '/<TokInfo>/s#\s*<[^>]*>\s*##gp')
 ADMIN_USER_PASSWORD_TOKEN="${LOGIN_ADMIN_USER}${LOGIN_ADMIN_PASSWORD_BASE64}${LOGIN_SERVER_TOKEN}"
