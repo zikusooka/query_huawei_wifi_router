@@ -94,8 +94,9 @@ calc(){ awk "BEGIN{ print $* }" ;}
 
 server_session_token_info () {
 HTTP_BROWSER_URL=http://$IP_ADDRESS
-LOGIN_SERVER_COOKIE=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo | sed -ne '/<SesInfo>/s#\s*<[^>]*>\s*##gp')
-LOGIN_SERVER_TOKEN=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo | sed -ne '/<TokInfo>/s#\s*<[^>]*>\s*##gp')
+LOGIN_SERVER_RES=$($HTTP_BROWSER_COMMAND $HTTP_BROWSER_URL/api/webserver/SesTokInfo)
+LOGIN_SERVER_COOKIE=$(printf "$LOGIN_SERVER_RES" | sed -ne '/<SesInfo>/s#\s*<[^>]*>\s*##gp')
+LOGIN_SERVER_TOKEN=$(printf "$LOGIN_SERVER_RES" | sed -ne '/<TokInfo>/s#\s*<[^>]*>\s*##gp')
 ADMIN_USER_PASSWORD_TOKEN="${LOGIN_ADMIN_USER}${LOGIN_ADMIN_PASSWORD_BASE64}${LOGIN_SERVER_TOKEN}"
 if [[ $OSTYPE == darwin* ]]; then
     ADMIN_USER_PASSWORD_TOKEN_BASE64=$(printf "$(printf "$ADMIN_USER_PASSWORD_TOKEN" | shasum -a 256 |  cut -d ' ' -f 1)" | base64 | tr -d '\n')
